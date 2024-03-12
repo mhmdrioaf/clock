@@ -1,12 +1,18 @@
 import React from "react";
 
+export type TTime = {
+  minutes: number;
+  seconds: number;
+};
+
 export type TClockContext = {
   state: {
-    breakTime: number;
-    sessionTime: number;
-    timeLeft: number;
+    breakTime: TTime;
+    sessionTime: TTime;
+    timeLeft: TTime;
     isRunning: boolean;
     isSession: boolean;
+    timeLabel: "Session" | "Break";
   };
 
   handler: {
@@ -18,65 +24,98 @@ export type TClockContext = {
       increment: () => void;
       decrement: () => void;
     };
-    timeLeft: {
-      increment: () => void;
-      decrement: () => void;
-    };
-    isRunning: {
-      toggle: () => void;
-    };
-    isSession: {
-      toggle: () => void;
-    };
+    reset: () => void;
+    start: () => void;
+    pause: () => void;
   };
 };
 
 export const ClockContext = React.createContext<TClockContext | null>(null);
 
 export function ClockProvider({ children }: { children: React.ReactNode }) {
-  const [breakTime, setBreakTime] = React.useState(5);
-  const [sessionTime, setSessionTime] = React.useState(25);
-  const [timeLeft, setTimeLeft] = React.useState(25 * 60 * 1000);
+  const [sessionTime, setSessionTime] = React.useState<TTime>({
+    minutes: 25,
+    seconds: 0,
+  });
+
+  const [breakTime, setBreakTime] = React.useState<TTime>({
+    minutes: 5,
+    seconds: 0,
+  });
+
+  const [timeLeft, setTimeLeft] = React.useState<TTime>({
+    minutes: 25,
+    seconds: 0,
+  });
+
   const [isRunning, setIsRunning] = React.useState(false);
   const [isSession, setIsSession] = React.useState(false);
+  const [timeLabel, setTimeLabel] = React.useState<"Session" | "Break">(
+    "Session"
+  );
+
+  const audioElement = document.getElementById(
+    "beep"
+  ) as HTMLAudioElement | null;
 
   const breakTimeHandler = {
-    increment: () => {
-      setBreakTime((prev) => (prev >= 60 ? 60 : prev + 1));
-    },
-    decrement: () => {
-      setBreakTime((prev) => (prev <= 1 ? 1 : prev - 1));
-    },
+    increase: () =>
+      setBreakTime((prev) => {
+        if (prev.minutes < 60) {
+          return { ...prev, minutes: prev.minutes + 1 };
+        }
+        return prev;
+      }),
+    decrease: () =>
+      setBreakTime((prev) => {
+        if (prev.minutes > 1) {
+          return { ...prev, minutes: prev.minutes - 1 };
+        }
+        return prev;
+      }),
   };
 
   const sessionTimeHandler = {
-    increment: () => {
-      setSessionTime((prev) => (prev >= 60 ? 60 : prev + 1));
-    },
-    decrement: () => {
-      setSessionTime((prev) => (prev <= 1 ? 1 : prev - 1));
-    },
+    increase: () =>
+      setSessionTime((prev) => {
+        if (prev.minutes < 60) {
+          const value = { ...prev, minutes: prev.minutes + 1 };
+          setTimeLeft(value);
+          return value;
+        }
+        return prev;
+      }),
+    decrease: () =>
+      setSessionTime((prev) => {
+        if (prev.minutes > 1) {
+          const value = { ...prev, minutes: prev.minutes - 1 };
+          setTimeLeft(value);
+          return value;
+        }
+        return prev;
+      }),
   };
 
-  const timeLeftHandler = {
-    increment: () => {
-      setTimeLeft((prev) => prev + 60 * 1000);
-    },
-    decrement: () => {
-      setTimeLeft((prev) => (prev <= 0 ? 0 : prev - 60 * 1000));
-    },
+  const start = () => {
+    setIsRunning(true);
+    setIsSession(true);
   };
 
-  const isRunningHandler = {
-    toggle: () => {
-      setIsRunning((prev) => !prev);
-    },
+  const pause = () => {
+    setIsRunning(false);
   };
 
-  const isSessionHandler = {
-    toggle: () => {
-      setIsSession((prev) => !prev);
-    },
+  const reset = () => {
+    setTimeLabel("Session");
+    setIsRunning(false);
+    setIsSession(false);
+    setSessionTime({ minutes: 25, seconds: 0 });
+    setBreakTime({ minutes: 5, seconds: 0 });
+    setTimeLeft({ minutes: 25, seconds: 0 });
+    if (audioElement) {
+      audioElement.pause();
+      audioElement.currentTime = 0;
+    }
   };
 
   const value: TClockContext = {
@@ -86,15 +125,57 @@ export function ClockProvider({ children }: { children: React.ReactNode }) {
       timeLeft,
       isRunning,
       isSession,
+      timeLabel,
     },
     handler: {
-      breakTime: breakTimeHandler,
-      sessionTime: sessionTimeHandler,
-      timeLeft: timeLeftHandler,
-      isRunning: isRunningHandler,
-      isSession: isSessionHandler,
+      breakTime: {
+        increment: breakTimeHandler.increase,
+        decrement: breakTimeHandler.decrease,
+      },
+      sessionTime: {
+        increment: sessionTimeHandler.increase,
+        decrement: sessionTimeHandler.decrease,
+      },
+      reset: reset,
+      start: start,
+      pause: pause,
     },
   };
+
+  const handleStartTime = React.useCallback(
+    (label: "Session" | "Break", interval: number) => {
+      if (timeLeft.minutes === 0 && timeLeft.seconds === 0) {
+        setTimeLeft(label === "Break" ? breakTime : sessionTime);
+        setTimeLabel(label === "Break" ? "Break" : "Session");
+        setIsSession((prev) => !prev);
+        if (audioElement) {
+          audioElement.play();
+        }
+        clearInterval(interval);
+      } else {
+        if (timeLeft.seconds === 0) {
+          setTimeLeft((prev) => {
+            return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+          });
+        } else {
+          setTimeLeft((prev) => {
+            return { ...prev, seconds: prev.seconds - 1 };
+          });
+        }
+      }
+    },
+    [audioElement, breakTime, timeLeft, sessionTime]
+  );
+
+  React.useEffect(() => {
+    if (isRunning) {
+      const interval = setInterval(() => {
+        handleStartTime(isSession ? "Break" : "Session", interval);
+      }, 10);
+
+      return () => clearInterval(interval);
+    }
+  }, [handleStartTime, isRunning, isSession]);
 
   return (
     <ClockContext.Provider value={value}>{children}</ClockContext.Provider>
