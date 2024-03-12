@@ -171,7 +171,7 @@ export function ClockProvider({ children }: { children: React.ReactNode }) {
     if (isRunning) {
       const interval = setInterval(() => {
         handleStartTime(isSession ? "Break" : "Session", interval);
-      }, 10);
+      }, 1000);
 
       return () => clearInterval(interval);
     }
