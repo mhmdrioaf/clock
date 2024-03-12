@@ -1,47 +1,30 @@
+import Clock from "./components/clock";
+import ClockHandler from "./components/clockHandler";
+import Container from "./components/container";
+import TimerControl from "./components/timerControl";
+
 export default function App() {
   return (
-    <main className="w-full min-h-screen flex flex-col gap-2 items-center justify-center bg-stone-950 text-neutral-50 font-mono">
-      <div className="flex flex-col gap-1 text-center">
-        <h3 className="text-2xl font-bold">Hello, Vite!</h3>
-        <p className="text-xs">
-          All the <b>TailwindCSS</b> integrations are complete; you could start
-          building your app right away.
-        </p>
-      </div>
+    <main className="w-full min-h-screen flex flex-col gap-2 items-center justify-center bg-zinc-950 font-mono text-neutral-200">
+      <h2 className="text-6xl font-bold text-center">25 + 5 Clock</h2>
+      <Container>
+        <ClockHandler />
+        <Clock />
+        <TimerControl />
 
-      <p className="text-center text-xs">
-        Built with{" "}
+        <audio
+          src="https://assets.mixkit.co/active_storage/sfx/1084/1084.wav"
+          id="beep"
+          className="hidden"
+        />
+      </Container>
+
+      <p className="text-sm text-center">
+        Designed and developed by{" "}
         <a
-          href="https://vitejs.dev"
+          href="https://twitter.com/oirioir"
           target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500"
-        >
-          Vite
-        </a>
-        ,{" "}
-        <a
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500"
-        >
-          React
-        </a>
-        , and{" "}
-        <a
-          href="https://tailwindcss.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500"
-        >
-          TailwindCSS
-        </a>{" "}
-        by{" "}
-        <a
-          href="https://github.com/mhmdrioaf"
-          target="_blank"
-          className="text-blue-500"
+          className="font-bold underline"
         >
           Rio Ananta
         </a>
